@@ -3,6 +3,7 @@ attrs==26.1.0
 Django==6.1.1
 django-environ==0.14.0
 djangorestframework==3.18.0
+djangorestframework-simplejwt==5.5.1
 drf-spectacular==0.30.0
 inflection==0.5.1
 iniconfig==2.3.0
@@ -12,6 +13,7 @@ packaging==26.3
 pluggy==1.6.0
 psycopg==3.3.5
 psycopg-binary==3.3.5
+PyJWT==2.13.0
 Pygments==2.21.0
 pytest==9.1.1
 pytest-django==4.14.0

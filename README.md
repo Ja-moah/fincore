@@ -75,8 +75,91 @@ attempt telemetry would require an external or tamper-resistant audit channel
 with carefully defined delivery guarantees.
 
 Known limitations include the absence of an opening-balance/funding workflow,
-reversals, idempotent request handling, HTTP endpoints, and durable external
-audit delivery. Those concerns are intentionally outside this milestone.
+reversals, and durable external audit delivery.
+
+## API authentication and authorization
+
+The API uses standard JWT access and refresh tokens from Simple JWT. Obtain a
+token pair with `POST /api/v1/auth/token/` using a Django username and password,
+then send the access token as `Authorization: Bearer <token>`. Refresh access
+tokens with `POST /api/v1/auth/token/refresh/`.
+
+The authenticated user determines the sender account; the transfer request has
+no trusted sender field. This API milestone requires exactly one account per
+user and returns `ACCOUNT_SELECTION_REQUIRED` for ambiguous multi-account
+users. Transaction list and detail querysets include only transactions where
+one of the user's accounts is sender or recipient. An unrelated transaction is
+returned as `404`, avoiding disclosure that its identifier exists.
+
+### Endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/api/v1/auth/token/` | Obtain access and refresh tokens |
+| POST | `/api/v1/auth/token/refresh/` | Refresh an access token |
+| POST | `/api/v1/transfers/` | Create or replay an internal transfer |
+| GET | `/api/v1/accounts/me/` | Read the authenticated user's account |
+| GET | `/api/v1/accounts/me/balance/` | Read the ledger-derived balance |
+| GET | `/api/v1/transactions/` | Paginated transaction history, newest first |
+| GET | `/api/v1/transactions/{uuid}/` | Authorized transaction detail |
+| GET | `/api/schema/` | OpenAPI schema |
+| GET | `/api/docs/` | Swagger UI |
+
+Swagger documents JWT authentication, request and response bodies, error
+responses, and the required `Idempotency-Key` header. Use the **Authorize**
+control with a valid access token to call protected endpoints.
+
+### Transfer example
+
+```http
+POST /api/v1/transfers/
+Authorization: Bearer <access-token>
+Idempotency-Key: ABC123
+Content-Type: application/json
+
+{
+  "recipient_account": "GH0000000002",
+  "amount": "250.00",
+  "currency": "GHS"
+}
+```
+
+```json
+{
+  "id": "e1c8d333-a4d7-40c6-bbb0-f7dcfeff6f9c",
+  "status": "SUCCEEDED",
+  "amount": "250.00",
+  "currency": "GHS",
+  "sender_account": "GH0000000001",
+  "recipient_account": "GH0000000002",
+  "created_at": "2026-09-07T12:00:00Z"
+}
+```
+
+Stable error codes include `AUTHENTICATION_REQUIRED`,
+`INVALID_AUTHENTICATION`, `INVALID_AMOUNT`, `INSUFFICIENT_FUNDS`,
+`ACCOUNT_UNAVAILABLE`, `CURRENCY_MISMATCH`, `IDEMPOTENCY_KEY_REQUIRED`, and
+`IDEMPOTENCY_CONFLICT`.
+
+### Idempotency and retry semantics
+
+An idempotency key is scoped to the authenticated user. Its SHA-256 fingerprint
+contains the normalized sender, recipient, two-decimal amount, and currency.
+The key record and financial transfer commit in one outer database transaction.
+
+If the same request arrives twice sequentially, the stored status and response
+body are returned and no transfer logic runs again. If the payload differs, the
+API returns `409 IDEMPOTENCY_CONFLICT`. If two duplicates arrive concurrently,
+both race to insert the same database-unique `(user, key)` pair. PostgreSQL
+blocks the competing insert until the winner commits; the loser then locks and
+replays the completed record. This provides at-most-once financial movement
+without an unsafe check-then-insert race.
+
+If validation or the transfer fails before commit, the idempotency record rolls
+back too, so the same key may be retried. If the transfer commits but the HTTP
+response is lost, retrying returns the stored successful response. Expiry is
+recorded by the model but keys remain reserved until an explicit retention job
+deletes them; no cleanup job is implemented yet.
 
 Run `make help` for the complete command list. The default setup is intended
 for local development only; change `SECRET_KEY`, disable `DEBUG`, and configure
