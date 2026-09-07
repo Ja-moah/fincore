@@ -57,6 +57,7 @@ def execute_idempotent_transfer(
     recipient_account,
     amount,
     currency,
+    request_id=None,
 ):
     """Create or safely replay a transfer under a user-scoped key.
 
@@ -97,6 +98,7 @@ def execute_idempotent_transfer(
             amount=amount,
             currency=currency,
             actor=user,
+            request_id=request_id,
         )
         response_body = build_transfer_response(financial_transaction)
         record.transaction = financial_transaction

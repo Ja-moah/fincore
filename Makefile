@@ -3,7 +3,7 @@ WEB := $(COMPOSE) exec web
 PYTHON := $(WEB) python
 MANAGE := $(PYTHON) manage.py
 
-.PHONY: help build config up down restart logs ps shell migrations migrate test test-v check superuser clean reset bootstrap
+.PHONY: help build config up down restart logs ps shell migrations migrate test test-v coverage check seed superuser clean reset bootstrap
 
 help:
 	@echo "FinCore commands"
@@ -20,11 +20,13 @@ help:
 	@echo "  make migrate      Apply migrations"
 	@echo "  make test         Run tests"
 	@echo "  make test-v       Run verbose tests"
+	@echo "  make coverage     Run tests with terminal coverage report"
 	@echo "  make check        Run Django checks"
+	@echo "  make seed         Create deterministic development demo data"
 	@echo "  make superuser    Create admin user"
 	@echo "  make reset        Rebuild containers"
 	@echo "  make clean        Remove Python cache files"
-	@echo "  make bootstrap    Build, start, migrate, and check application"
+	@echo "  make bootstrap    Build, start, migrate, seed, and check application"
 
 build:
 	$(COMPOSE) build
@@ -62,8 +64,14 @@ test:
 test-v:
 	$(PYTHON) -m pytest -vv
 
+coverage:
+	$(PYTHON) -m pytest --cov --cov-report=term-missing
+
 check:
 	$(MANAGE) check
+
+seed:
+	$(MANAGE) seed_demo
 
 superuser:
 	$(MANAGE) createsuperuser
@@ -82,4 +90,5 @@ bootstrap:
 	$(COMPOSE) build
 	$(COMPOSE) up -d
 	$(MANAGE) migrate
+	$(MANAGE) seed_demo
 	$(MANAGE) check

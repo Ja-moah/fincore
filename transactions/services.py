@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 
 from django.db import transaction as db_transaction
@@ -11,6 +12,9 @@ from ledger.services import (
 from ledger.services import calculate_balance
 
 from .models import Transaction
+
+
+logger = logging.getLogger(__name__)
 
 
 class TransferError(Exception):
@@ -171,5 +175,13 @@ def transfer_funds(
         if request_id is not None:
             audit_kwargs["request_id"] = request_id
         AuditEvent.objects.create(**audit_kwargs)
+
+        transaction_id = financial_transaction.id
+        db_transaction.on_commit(
+            lambda: logger.info(
+                "transfer_committed transaction_id=%s result=succeeded",
+                transaction_id,
+            )
+        )
 
         return financial_transaction

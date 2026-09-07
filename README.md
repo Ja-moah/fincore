@@ -1,8 +1,27 @@
 # FinCore Transaction Engine
 
-FinCore is a Django/PostgreSQL backend challenge focused on building safe
-financial transfers. The repository is currently at the development-environment
-milestone; the financial domain and transfer API are not implemented yet.
+FinCore is a backend engineering challenge that demonstrates how an internal
+financial transfer differs from ordinary CRUD. A transfer is an atomic,
+authorized, retry-safe state transition backed by double-entry ledger records,
+database constraints, row locking, audit context, and failure tests.
+
+## Technology stack
+
+- Python 3.14, Django, and Django REST Framework
+- PostgreSQL 17 and psycopg
+- Simple JWT authentication
+- drf-spectacular OpenAPI/Swagger documentation
+- Docker Compose, GNU Make, pytest, and GitHub Actions
+
+## Core guarantees
+
+- Every successful transfer creates one equal debit and credit.
+- The ledger—not an account balance column—is financial truth.
+- PostgreSQL transactions prevent partial movement during crashes.
+- Ordered row locks prevent concurrent overspending.
+- User-scoped idempotency provides at-most-once movement for retries.
+- Authenticated ownership scopes transfer initiation and transaction reads.
+- Database constraints enforce positive amounts and distinct accounts.
 
 ## Prerequisites
 
@@ -13,15 +32,37 @@ milestone; the financial domain and transfer API are not implemented yet.
 
 ```bash
 cp .env.example .env
-make build
-make up
-make migrate
-make check
-make test
+make bootstrap
 ```
 
 The Django development server is available at <http://localhost:8000> after
-`make up`.
+bootstrap. Swagger is at <http://localhost:8000/api/docs/> and health status is
+at <http://localhost:8000/health/>. Run `make help` for individual commands.
+
+`make bootstrap` validates Compose configuration, builds and starts services,
+applies migrations, creates deterministic demo data, and runs Django checks.
+
+## Demo data
+
+Run `make seed` at any time. The command is idempotent and creates fictional,
+balanced demo history with these known account balances:
+
+| Username | Account | Balance |
+| --- | --- | ---: |
+| `demo_alice` | `DEMO-GHS-ALICE` | GHS 1,100.00 |
+| `demo_bob` | `DEMO-GHS-BOB` | GHS 1,000.00 |
+| `demo_charlie` | `DEMO-GHS-CHARLIE` | GHS 900.00 |
+
+Their shared password is `fincore-demo-only`. These predictable credentials
+are strictly for local development and must never be deployed publicly.
+
+## Architecture documentation
+
+- [Architecture and sequence diagrams](docs/architecture.md)
+- [Database and ER diagram](docs/database.md)
+- [Failure scenarios and executable evidence](docs/failure-scenarios.md)
+- [Security review](docs/security.md)
+- [Technical decisions](docs/technical-decisions.md)
 
 ## Financial data model
 
@@ -102,6 +143,7 @@ returned as `404`, avoiding disclosure that its identifier exists.
 | GET | `/api/v1/accounts/me/balance/` | Read the ledger-derived balance |
 | GET | `/api/v1/transactions/` | Paginated transaction history, newest first |
 | GET | `/api/v1/transactions/{uuid}/` | Authorized transaction detail |
+| GET | `/health/` | Application and database health |
 | GET | `/api/schema/` | OpenAPI schema |
 | GET | `/api/docs/` | Swagger UI |
 
@@ -161,7 +203,47 @@ response is lost, retrying returns the stored successful response. Expiry is
 recorded by the model but keys remain reserved until an explicit retention job
 deletes them; no cleanup job is implemented yet.
 
-Run `make help` for the complete command list. The default setup is intended
-for local development only; change `SECRET_KEY`, disable `DEBUG`, and configure
-production host and deployment settings before using it outside a development
-machine.
+## Testing and CI
+
+```bash
+make check       # Django system checks
+make test        # complete pytest suite against PostgreSQL
+make coverage    # branch and line coverage with missing lines
+```
+
+CI runs on every push and pull request with a PostgreSQL 17 service. It installs
+pinned dependencies, runs Django checks, rejects migration drift, applies all
+migrations, validates OpenAPI, and executes the complete suite.
+
+The highest-value evidence is indexed in
+[docs/failure-scenarios.md](docs/failure-scenarios.md), including real concurrent
+PostgreSQL tests for duplicate requests and overspending.
+
+## Known limitations
+
+FinCore has no deposit/opening-balance product workflow, reversal workflow,
+reconciliation engine, idempotency cleanup job, multi-account API selection,
+external payment rail, rate limiting, fraud engine, database HA/PITR setup, or
+durable external audit sink. The demo treasury allocator is development-only.
+
+## Biggest technical risk
+
+The biggest risk is preserving ledger correctness as new money-moving paths and
+operational failure modes are introduced. Current controls—one PostgreSQL ACID
+boundary, deterministic row locking, double-entry construction, balancing
+checks, database constraints, idempotency uniqueness, rollback tests, and real
+concurrency tests—protect the implemented internal transfer path.
+
+I would address growth risk with centralized posting primitives, mandatory
+reconciliation, database-level monitoring for invariant violations, a
+transactional outbox for external effects, independent ledger audit tooling,
+strict code review around lock ordering, and database backup/restore drills.
+
+## If I had another 72 hours, I would…
+
+Build explicit reversal and reconciliation workflows first, then add a
+transactional outbox and tamper-resistant audit sink. I would add production
+secret management, rate limiting, fraud/risk controls, richer observability,
+database high availability and point-in-time recovery, dependency/container
+scanning, and restore/load testing before integrating any external payment
+provider. These are future improvements, not capabilities claimed here.

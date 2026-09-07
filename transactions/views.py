@@ -1,3 +1,5 @@
+import logging
+
 from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, status
@@ -33,7 +35,11 @@ from .services import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 def error_response(code, message, http_status):
+    logger.warning("request_rejected code=%s", code)
     return Response(
         {"error": {"code": code, "message": message}},
         status=http_status,
@@ -106,7 +112,7 @@ class TransferCreateView(APIView):
             currency=data["currency"],
         )
         try:
-            response_body, response_status, _replayed = execute_idempotent_transfer(
+            response_body, response_status, replayed = execute_idempotent_transfer(
                 user=request.user,
                 key=idempotency_key,
                 fingerprint=fingerprint,
@@ -114,6 +120,7 @@ class TransferCreateView(APIView):
                 recipient_account=recipient,
                 amount=data["amount"],
                 currency=data["currency"],
+                request_id=getattr(request, "request_id", None),
             )
         except IdempotencyConflictError as exc:
             return error_response(exc.code, str(exc), status.HTTP_409_CONFLICT)
@@ -130,6 +137,8 @@ class TransferCreateView(APIView):
         except CurrencyMismatchError as exc:
             return error_response("CURRENCY_MISMATCH", str(exc), 409)
 
+        if replayed:
+            logger.info("idempotent_response_replayed transaction_id=%s", response_body["id"])
         return Response(response_body, status=response_status)
 
 

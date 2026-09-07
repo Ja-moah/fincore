@@ -1,5 +1,6 @@
 import threading
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from decimal import Decimal
@@ -11,6 +12,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 
 from accounts.models import Account, Currency
+from audit.models import AuditEvent
 from ledger.models import LedgerEntry
 from ledger.services import calculate_balance
 from transactions import services as transfer_services
@@ -128,12 +130,14 @@ def test_authenticated_transfer_uses_owned_sender_and_balances_ledger(api_contex
     fund_account(api_context["treasury"], api_context["sender"])
     payload = transfer_payload(api_context["recipient"], "125.00")
     payload["sender_account"] = api_context["unrelated"].account_number
+    request_id = str(uuid.uuid4())
 
     response = authenticated_client(api_context["sender_user"]).post(
         TRANSFER_URL,
         payload,
         format="json",
         HTTP_IDEMPOTENCY_KEY="owned-sender",
+        HTTP_X_REQUEST_ID=request_id,
     )
 
     assert response.status_code == 201
@@ -143,6 +147,10 @@ def test_authenticated_transfer_uses_owned_sender_and_balances_ledger(api_contex
     assert transaction.sender == api_context["sender"]
     assert len(entries) == 2
     assert sum(entry.signed_amount for entry in entries) == Decimal("0.00")
+    assert AuditEvent.objects.get(resource_id=str(transaction.id)).request_id == uuid.UUID(
+        request_id
+    )
+    assert response["X-Request-ID"] == request_id
 
 
 def test_insufficient_funds_returns_stable_error(api_context):

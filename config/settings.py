@@ -20,6 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
+    SECURE_SSL_REDIRECT=(bool, False),
+    SESSION_COOKIE_SECURE=(bool, False),
+    CSRF_COOKIE_SECURE=(bool, False),
+    SECURE_HSTS_SECONDS=(int, 0),
+    SECURE_HSTS_INCLUDE_SUBDOMAINS=(bool, False),
+    SECURE_HSTS_PRELOAD=(bool, False),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -28,7 +34,7 @@ environ.Env.read_env(BASE_DIR / ".env")
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("SECRET_KEY", default="unsafe-development-key-change-me")
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG")
@@ -57,6 +63,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "config.middleware.RequestCorrelationMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -136,10 +143,20 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+SECURE_SSL_REDIRECT = env("SECURE_SSL_REDIRECT")
+SESSION_COOKIE_SECURE = env("SESSION_COOKIE_SECURE")
+CSRF_COOKIE_SECURE = env("CSRF_COOKIE_SECURE")
+SECURE_HSTS_SECONDS = env("SECURE_HSTS_SECONDS")
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env("SECURE_HSTS_INCLUDE_SUBDOMAINS")
+SECURE_HSTS_PRELOAD = env("SECURE_HSTS_PRELOAD")
+
 
 MAILERS = {
     "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
+        "BACKEND": env(
+            "EMAIL_BACKEND",
+            default="django.core.mail.backends.console.EmailBackend",
+        ),
     },
 }
 
@@ -166,4 +183,34 @@ SPECTACULAR_SETTINGS = {
 
 SIMPLE_JWT = {
     "SIGNING_KEY": env("JWT_SIGNING_KEY", default=SECRET_KEY),
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "request_context": {
+            "()": "config.request_context.RequestContextFilter",
+        },
+    },
+    "formatters": {
+        "structured": {
+            "format": (
+                "time={asctime} level={levelname} logger={name} "
+                "request_id={request_id} message={message}"
+            ),
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "filters": ["request_context"],
+            "formatter": "structured",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
 }

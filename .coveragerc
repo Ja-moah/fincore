@@ -1,0 +1,12 @@
+[run]
+branch = True
+source = accounts, audit, config, ledger, transactions
+
+[report]
+show_missing = True
+skip_covered = True
+omit =
+    */migrations/*
+    */admin.py
+    */apps.py
+    */tests.py
