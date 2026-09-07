@@ -60,6 +60,7 @@ are strictly for local development and must never be deployed publicly.
 
 - [Architecture and sequence diagrams](docs/architecture.md)
 - [Database and ER diagram](docs/database.md)
+- [Deployment guide](docs/deployment.md)
 - [Failure scenarios and executable evidence](docs/failure-scenarios.md)
 - [Security review](docs/security.md)
 - [Technical decisions](docs/technical-decisions.md)

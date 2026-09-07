@@ -8,6 +8,10 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      COVERAGE_FILE: /tmp/fincore.coverage
+      PYTEST_ADDOPTS: -o cache_dir=/tmp/fincore-pytest-cache
+      STATIC_ROOT: /tmp/fincore-staticfiles
     depends_on:
       db:
         condition: service_healthy

@@ -60,6 +60,9 @@ jobs:
       - name: Apply migrations
         run: python manage.py migrate --noinput
 
+      - name: Collect static files
+        run: python manage.py collectstatic --noinput
+
       - name: Validate OpenAPI schema
         run: python manage.py spectacular --validate --file /tmp/fincore-schema.yaml
 
