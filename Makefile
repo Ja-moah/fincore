@@ -3,12 +3,13 @@ WEB := $(COMPOSE) exec web
 PYTHON := $(WEB) python
 MANAGE := $(PYTHON) manage.py
 
-.PHONY: help build up down restart logs ps shell migrations migrate test test-v check superuser clean reset
+.PHONY: help build config up down restart logs ps shell migrations migrate test test-v check superuser clean reset bootstrap
 
 help:
 	@echo "FinCore commands"
 	@echo ""
 	@echo "  make build        Build Docker images"
+	@echo "  make config       Validate the Compose configuration"
 	@echo "  make up           Start application"
 	@echo "  make down         Stop application"
 	@echo "  make restart      Restart application"
@@ -27,6 +28,9 @@ help:
 
 build:
 	$(COMPOSE) build
+
+config:
+	$(COMPOSE) config --quiet
 
 up:
 	$(COMPOSE) up -d
@@ -74,6 +78,7 @@ reset:
 	$(COMPOSE) up -d
 
 bootstrap:
+	$(COMPOSE) config --quiet
 	$(COMPOSE) build
 	$(COMPOSE) up -d
 	$(MANAGE) migrate

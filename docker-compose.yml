@@ -15,15 +15,19 @@ services:
   db:
     image: postgres:17
     environment:
-      POSTGRES_DB: fincore
-      POSTGRES_USER: fincore
-      POSTGRES_PASSWORD: fincore_dev
+      POSTGRES_DB: ${DB_NAME:-fincore}
+      POSTGRES_USER: ${DB_USER:-fincore}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-fincore_dev}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - fincore_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fincore -d fincore"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-fincore} -d ${DB_NAME:-fincore}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
