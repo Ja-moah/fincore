@@ -48,8 +48,10 @@ only enable preload after the domain and all subdomains are permanently ready.
 
 ## Release workflow
 
-Run these as distinct platform phases. Migrations and demo data are deliberately
-not part of the web process startup.
+Prefer distinct platform phases where the host provides a release command.
+Render deployments without Shell access may use the included startup script,
+which applies non-interactive migrations before starting Gunicorn. Demo data is
+never part of web process startup.
 
 **Build**
 
@@ -73,13 +75,19 @@ rollout; do not run migration commands concurrently from every web replica.
 **Start**
 
 ```bash
-gunicorn --config gunicorn.conf.py config.wsgi:application
+sh bin/start.sh
 ```
 
-The configuration binds to `0.0.0.0:${PORT:-8000}` and defaults to two threaded
-workers with two threads each, a modest profile for a small staging service.
-Tune concurrency against the service memory limit and PostgreSQL connection
-budget.
+The script runs `python manage.py migrate --noinput` and only starts Gunicorn if
+the migration succeeds. Gunicorn binds to `0.0.0.0:${PORT:-8000}` and defaults
+to two threaded workers with two threads each, a modest profile for a small
+staging service. Tune concurrency against the service memory limit and
+PostgreSQL connection budget.
+
+This startup migration fallback is appropriate for FinCore's single staging web
+service. Before scaling to multiple replicas, move migrations into the hosting
+platform's one-off release/pre-deploy phase so several containers cannot attempt
+schema changes simultaneously.
 
 ## Evaluator endpoints and demo data
 

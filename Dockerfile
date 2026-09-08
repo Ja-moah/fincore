@@ -24,4 +24,4 @@ USER fincore
 
 EXPOSE 8000
 
-CMD ["gunicorn", "--config", "gunicorn.conf.py", "config.wsgi:application"]
+CMD ["sh", "/app/bin/start.sh"]
