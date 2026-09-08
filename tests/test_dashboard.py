@@ -14,6 +14,7 @@ def test_dashboard_is_public_and_exposes_the_existing_api_workflow(client):
     assert b"Send money" in response.content
     assert b"Transaction history" in response.content
     assert b"/api/docs/" in response.content
+    assert static("config/favicon.png").encode() in response.content
 
 
 def test_dashboard_static_assets_resolve_through_django_static_storage(client):
