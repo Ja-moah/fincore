@@ -5,6 +5,17 @@ financial transfer differs from ordinary CRUD. A transfer is an atomic,
 authorized, retry-safe state transition backed by double-entry ledger records,
 database constraints, row locking, audit context, and failure tests.
 
+## Live evaluator demo
+
+- Transaction console: <https://fincore-clj7.onrender.com/>
+- Service health: <https://fincore-clj7.onrender.com/health/>
+- Swagger UI: <https://fincore-clj7.onrender.com/api/docs/>
+- OpenAPI schema: <https://fincore-clj7.onrender.com/api/schema/>
+- Django admin: <https://fincore-clj7.onrender.com/admin/>
+
+This is a disposable challenge staging environment with the public fictional
+credentials listed below. It must not be used for real money or personal data.
+
 ## Technology stack
 
 - Python 3.14, Django, and Django REST Framework
@@ -45,16 +56,23 @@ applies migrations, creates deterministic demo data, and runs Django checks.
 ## Demo data
 
 Run `make seed` at any time. The command is idempotent and creates fictional,
-balanced demo history with these known account balances:
+balanced demo history with these known roles, credentials, and account balances:
 
-| Username | Account | Balance |
-| --- | --- | ---: |
-| `demo_alice` | `DEMO-GHS-ALICE` | GHS 1,100.00 |
-| `demo_bob` | `DEMO-GHS-BOB` | GHS 1,000.00 |
-| `demo_charlie` | `DEMO-GHS-CHARLIE` | GHS 900.00 |
+| Username | Password | Role | Account | Balance |
+| --- | --- | --- | --- | ---: |
+| `Admin` | `admin123` | Django administrator | `DEMO-GHS-ADMIN` | GHS 5,750.00 |
+| `Justice` | `just123` | Standard user | `DEMO-GHS-JUSTICE` | GHS 2,650.00 |
+| `Ama` | `ama123` | Standard user | `DEMO-GHS-AMA` | GHS 1,250.00 |
+| `Kojo` | `kojo123` | Standard user | `DEMO-GHS-KOJO` | GHS 850.00 |
 
-Their shared password is `fincore-demo-only`. These predictable credentials
-are strictly for local development and must never be deployed publicly.
+`Admin` may use both the transaction console and `/admin/`; all other listed
+users are ordinary non-staff users. The internal `demo_treasury` account cannot
+log in. These predictable credentials are only for the public challenge staging
+demo and must never be reused for a real system or live-money environment.
+
+The Render startup script runs this idempotent seed after migrations by default,
+so a fresh hosted database is immediately testable. Set
+`SEED_DEMO_ON_START=false` for any environment that should not contain the demo.
 
 ## Architecture documentation
 
@@ -137,6 +155,8 @@ returned as `404`, avoiding disclosure that its identifier exists.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
+| GET | `/` | Interactive transaction console |
+| GET/POST | `/admin/` | Django administration for the demo administrator |
 | POST | `/api/v1/auth/token/` | Obtain access and refresh tokens |
 | POST | `/api/v1/auth/token/refresh/` | Refresh an access token |
 | POST | `/api/v1/transfers/` | Create or replay an internal transfer |
@@ -227,6 +247,9 @@ make coverage    # branch and line coverage with missing lines
 CI runs on every push and pull request with a PostgreSQL 17 service. It installs
 pinned dependencies, runs Django checks, rejects migration drift, applies all
 migrations, validates OpenAPI, and executes the complete suite.
+
+The current complete suite contains 57 passing tests, including real PostgreSQL
+concurrency coverage for overspending and duplicate idempotent requests.
 
 The highest-value evidence is indexed in
 [docs/failure-scenarios.md](docs/failure-scenarios.md), including real concurrent

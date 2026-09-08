@@ -25,6 +25,11 @@ is not presented as production-ready.
 No CORS middleware is installed, so browsers receive no permissive cross-origin
 policy by default.
 
+The public evaluator staging environment intentionally contains predictable
+fictional demo credentials. They are not production credentials and must be
+removed by disabling `SEED_DEMO_ON_START` before adapting FinCore to any real
+deployment.
+
 ## Production hardening required
 
 - Set `DEBUG=False`, rotate strong application/JWT secrets through a secret

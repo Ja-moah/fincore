@@ -24,6 +24,12 @@ def test_seed_demo_is_idempotent_and_creates_known_balances():
         AuditEvent.objects.count(),
     )
 
+    admin = get_user_model().objects.get(username="Admin")
+    admin.is_staff = False
+    admin.is_superuser = False
+    admin.set_password("changed-password")
+    admin.save(update_fields=["password", "is_staff", "is_superuser"])
+
     call_command("seed_demo", verbosity=0)
 
     assert (
@@ -33,13 +39,32 @@ def test_seed_demo_is_idempotent_and_creates_known_balances():
         LedgerEntry.objects.count(),
         AuditEvent.objects.count(),
     ) == first_counts
-    assert first_counts == (4, 4, 4, 8, 1)
-    assert calculate_balance(Account.objects.get(account_number="DEMO-GHS-ALICE")) == Decimal(
-        "1100.00"
-    )
-    assert calculate_balance(Account.objects.get(account_number="DEMO-GHS-BOB")) == Decimal(
-        "1000.00"
-    )
-    assert calculate_balance(
-        Account.objects.get(account_number="DEMO-GHS-CHARLIE")
-    ) == Decimal("900.00")
+    assert first_counts == (5, 5, 7, 14, 1)
+    expected_balances = {
+        "DEMO-GHS-ADMIN": Decimal("5750.00"),
+        "DEMO-GHS-JUSTICE": Decimal("2650.00"),
+        "DEMO-GHS-AMA": Decimal("1250.00"),
+        "DEMO-GHS-KOJO": Decimal("850.00"),
+    }
+    for account_number, expected_balance in expected_balances.items():
+        assert calculate_balance(
+            Account.objects.get(account_number=account_number)
+        ) == expected_balance
+
+    user_model = get_user_model()
+    admin = user_model.objects.get(username="Admin")
+    assert admin.is_staff is True
+    assert admin.is_superuser is True
+    assert admin.check_password("admin123")
+
+    for username, password in (
+        ("Justice", "just123"),
+        ("Ama", "ama123"),
+        ("Kojo", "kojo123"),
+    ):
+        user = user_model.objects.get(username=username)
+        assert user.is_staff is False
+        assert user.is_superuser is False
+        assert user.check_password(password)
+
+    assert not user_model.objects.get(username="demo_treasury").has_usable_password()

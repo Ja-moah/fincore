@@ -12,20 +12,52 @@ from ledger.services import calculate_balance
 from transactions.models import Transaction
 
 
-DEMO_PASSWORD = "fincore-demo-only"
-
 USERS = {
-    "treasury": ("demo_treasury", "DEMO-GHS-TREASURY"),
-    "alice": ("demo_alice", "DEMO-GHS-ALICE"),
-    "bob": ("demo_bob", "DEMO-GHS-BOB"),
-    "charlie": ("demo_charlie", "DEMO-GHS-CHARLIE"),
+    "treasury": {
+        "username": "demo_treasury",
+        "account_number": "DEMO-GHS-TREASURY",
+        "password": None,
+        "is_staff": False,
+        "is_superuser": False,
+    },
+    "admin": {
+        "username": "Admin",
+        "account_number": "DEMO-GHS-ADMIN",
+        "password": "admin123",
+        "is_staff": True,
+        "is_superuser": True,
+    },
+    "justice": {
+        "username": "Justice",
+        "account_number": "DEMO-GHS-JUSTICE",
+        "password": "just123",
+        "is_staff": False,
+        "is_superuser": False,
+    },
+    "ama": {
+        "username": "Ama",
+        "account_number": "DEMO-GHS-AMA",
+        "password": "ama123",
+        "is_staff": False,
+        "is_superuser": False,
+    },
+    "kojo": {
+        "username": "Kojo",
+        "account_number": "DEMO-GHS-KOJO",
+        "password": "kojo123",
+        "is_staff": False,
+        "is_superuser": False,
+    },
 }
 
 TRANSACTIONS = (
-    ("00000000-0000-0000-0000-000000000001", "treasury", "alice", "1200.00"),
-    ("00000000-0000-0000-0000-000000000002", "treasury", "bob", "900.00"),
-    ("00000000-0000-0000-0000-000000000003", "treasury", "charlie", "900.00"),
-    ("00000000-0000-0000-0000-000000000010", "alice", "bob", "100.00"),
+    ("00000000-0000-0000-0000-000000000201", "treasury", "admin", "6000.00"),
+    ("00000000-0000-0000-0000-000000000202", "treasury", "justice", "2500.00"),
+    ("00000000-0000-0000-0000-000000000203", "treasury", "ama", "1200.00"),
+    ("00000000-0000-0000-0000-000000000204", "treasury", "kojo", "800.00"),
+    ("00000000-0000-0000-0000-000000000210", "admin", "justice", "250.00"),
+    ("00000000-0000-0000-0000-000000000211", "justice", "ama", "100.00"),
+    ("00000000-0000-0000-0000-000000000212", "ama", "kojo", "50.00"),
 )
 
 
@@ -44,36 +76,42 @@ class Command(BaseCommand):
             )
 
         AuditEvent.objects.get_or_create(
-            request_id=uuid.UUID("00000000-0000-0000-0000-000000000100"),
+            request_id=uuid.UUID("00000000-0000-0000-0000-000000000200"),
             defaults={
                 "actor": accounts["treasury"].user,
                 "action": "demo.seeded",
                 "resource_type": "dataset",
-                "resource_id": "fincore-demo-v1",
+                "resource_id": "fincore-demo-v2",
                 "metadata": {"result": "ready"},
             },
         )
 
         self.stdout.write(self.style.SUCCESS("Demo data is ready."))
-        for name in ("alice", "bob", "charlie"):
+        for name in ("admin", "justice", "ama", "kojo"):
             account = accounts[name]
             self.stdout.write(
                 f"{account.user.username}: {account.account_number} "
                 f"balance={calculate_balance(account):.2f} {account.currency}"
             )
-        self.stdout.write(
-            "Development-only password for demo_alice/demo_bob/demo_charlie: "
-            f"{DEMO_PASSWORD}"
-        )
+        self.stdout.write("Demo credentials configured as documented in README.md.")
 
     def _ensure_users_and_accounts(self):
         user_model = get_user_model()
         accounts = {}
-        for name, (username, account_number) in USERS.items():
-            user, created = user_model.objects.get_or_create(username=username)
-            if created:
-                user.set_password(DEMO_PASSWORD)
-                user.save(update_fields=["password"])
+        for name, user_spec in USERS.items():
+            username = user_spec["username"]
+            account_number = user_spec["account_number"]
+            user, _ = user_model.objects.get_or_create(username=username)
+            user.is_staff = user_spec["is_staff"]
+            user.is_superuser = user_spec["is_superuser"]
+            user.is_active = True
+            if user_spec["password"] is None:
+                user.set_unusable_password()
+            else:
+                user.set_password(user_spec["password"])
+            user.save(
+                update_fields=["password", "is_active", "is_staff", "is_superuser"]
+            )
 
             account, _ = Account.objects.get_or_create(
                 account_number=account_number,
@@ -87,6 +125,9 @@ class Command(BaseCommand):
                 raise CommandError(
                     f"Existing account {account_number} conflicts with demo data."
                 )
+            if account.status != Account.Status.ACTIVE:
+                account.status = Account.Status.ACTIVE
+                account.save(update_fields=["status", "updated_at"])
             accounts[name] = account
         return accounts
 

@@ -8,10 +8,19 @@ const state = {
   lastTransfer: null,
 };
 
+const demoPasswords = {
+  Admin: "admin123",
+  Justice: "just123",
+  Ama: "ama123",
+  Kojo: "kojo123",
+};
+
 const elements = {
   loginView: document.querySelector("#login-view"),
   dashboardView: document.querySelector("#dashboard-view"),
   loginForm: document.querySelector("#login-form"),
+  username: document.querySelector("#username"),
+  password: document.querySelector("#password"),
   loginButton: document.querySelector("#login-button"),
   loginMessage: document.querySelector("#login-message"),
   logoutButton: document.querySelector("#logout-button"),
@@ -279,6 +288,10 @@ elements.loginForm.addEventListener("submit", async (event) => {
   }
 });
 
+elements.username.addEventListener("change", () => {
+  elements.password.value = demoPasswords[elements.username.value] || "";
+});
+
 elements.logoutButton.addEventListener("click", () => {
   clearTokens();
   elements.activityList.replaceChildren();
@@ -298,7 +311,7 @@ elements.newKeyButton.addEventListener("click", () => {
 
 elements.insufficientButton.addEventListener("click", () => {
   if (!elements.recipient.value) {
-    elements.recipient.value = state.account?.account_number === "DEMO-GHS-BOB" ? "DEMO-GHS-ALICE" : "DEMO-GHS-BOB";
+    elements.recipient.value = state.account?.account_number === "DEMO-GHS-AMA" ? "DEMO-GHS-KOJO" : "DEMO-GHS-AMA";
   }
   elements.amount.value = "999999.00";
   elements.idempotencyKey.value = generateIdempotencyKey("insufficient");

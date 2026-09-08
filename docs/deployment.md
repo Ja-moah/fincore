@@ -20,6 +20,7 @@ Internet -> Django/Gunicorn service -> managed PostgreSQL
 | `CSRF_TRUSTED_ORIGINS` | Comma-separated HTTPS origins for admin/browser POSTs | `https://fincore.example.com` |
 | `DEBUG` | Must be `False` | `False` |
 | `EMAIL_BACKEND` | Production mail backend required by deploy checks | `django.core.mail.backends.smtp.EmailBackend` |
+| `SEED_DEMO_ON_START` | Load the challenge dataset during startup | `true` for evaluator staging only |
 
 `DATABASE_URL` must use PostgreSQL; the application rejects other database
 engines. Local Docker Compose continues to use `DB_NAME`, `DB_USER`,
@@ -50,8 +51,8 @@ only enable preload after the domain and all subdomains are permanently ready.
 
 Prefer distinct platform phases where the host provides a release command.
 Render deployments without Shell access may use the included startup script,
-which applies non-interactive migrations before starting Gunicorn. Demo data is
-never part of web process startup.
+which applies non-interactive migrations and, for evaluator staging, loads the
+idempotent demo dataset before starting Gunicorn.
 
 **Build**
 
@@ -78,11 +79,12 @@ rollout; do not run migration commands concurrently from every web replica.
 sh bin/start.sh
 ```
 
-The script runs `python manage.py migrate --noinput` and only starts Gunicorn if
-the migration succeeds. Gunicorn binds to `0.0.0.0:${PORT:-8000}` and defaults
-to two threaded workers with two threads each, a modest profile for a small
-staging service. Tune concurrency against the service memory limit and
-PostgreSQL connection budget.
+The script runs `python manage.py migrate --noinput`, loads demo data when
+`SEED_DEMO_ON_START` is enabled, and only starts Gunicorn if both commands
+succeed. Gunicorn binds to `0.0.0.0:${PORT:-8000}` and defaults to two threaded
+workers with two threads each, a modest profile for a small staging service.
+Tune concurrency against the service memory limit and PostgreSQL connection
+budget.
 
 This startup migration fallback is appropriate for FinCore's single staging web
 service. Before scaling to multiple replicas, move migrations into the hosting
@@ -99,15 +101,16 @@ schema changes simultaneously.
 The health response exposes only availability state, never connection details
 or exception messages. Point the hosting health check at `/health/`.
 
-Demo data is never created automatically. If fictional evaluator accounts are
-appropriate for a disposable staging environment, create them intentionally:
+The evaluator deployment creates fictional demo accounts at startup. The same
+idempotent command can be run intentionally in another disposable environment:
 
 ```bash
 python manage.py seed_demo
 ```
 
-The command creates publicly documented demo credentials, so never run it in a
-real production environment or against real financial data.
+The command creates the publicly documented `Admin`, `Justice`, `Ama`, and
+`Kojo` credentials from README.md. Disable `SEED_DEMO_ON_START` outside the
+challenge staging environment and never run it against real financial data.
 
 ## Security and operations
 

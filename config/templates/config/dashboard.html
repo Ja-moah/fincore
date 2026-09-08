@@ -21,6 +21,7 @@
         <span class="status-dot" aria-hidden="true"></span>
         <span id="system-status-label">Checking system</span>
       </span>
+      <a href="/admin/" target="_blank" rel="noreferrer">Admin</a>
       <a href="/api/docs/" target="_blank" rel="noreferrer">API docs</a>
       <a href="/api/schema/" target="_blank" rel="noreferrer">Schema</a>
       <button class="button button-quiet" id="logout-button" type="button" hidden>Sign out</button>
@@ -49,13 +50,14 @@
 
         <label for="username">Demo user</label>
         <select id="username" name="username" autocomplete="username">
-          <option value="demo_alice">demo_alice — GHS 1,100</option>
-          <option value="demo_bob">demo_bob — GHS 1,000</option>
-          <option value="demo_charlie">demo_charlie — GHS 900</option>
+          <option value="Justice">Justice — standard user · GHS 2,650</option>
+          <option value="Admin">Admin — administrator · GHS 5,750</option>
+          <option value="Ama">Ama — standard user · GHS 1,250</option>
+          <option value="Kojo">Kojo — standard user · GHS 850</option>
         </select>
 
         <label for="password">Password</label>
-        <input id="password" name="password" type="password" value="fincore-demo-only" autocomplete="current-password" required>
+        <input id="password" name="password" type="password" value="just123" autocomplete="current-password" required>
 
         <button class="button button-primary button-full" id="login-button" type="submit">Sign in securely</button>
         <p class="form-message" id="login-message" role="alert" aria-live="polite"></p>
@@ -102,9 +104,10 @@
               <label for="recipient-account">Recipient account</label>
               <input id="recipient-account" name="recipient_account" list="demo-accounts" placeholder="DEMO-GHS-BOB" maxlength="34" required>
               <datalist id="demo-accounts">
-                <option value="DEMO-GHS-ALICE"></option>
-                <option value="DEMO-GHS-BOB"></option>
-                <option value="DEMO-GHS-CHARLIE"></option>
+                <option value="DEMO-GHS-ADMIN"></option>
+                <option value="DEMO-GHS-JUSTICE"></option>
+                <option value="DEMO-GHS-AMA"></option>
+                <option value="DEMO-GHS-KOJO"></option>
               </datalist>
 
               <div class="form-row">
