@@ -83,6 +83,7 @@ budget.
 
 ## Evaluator endpoints and demo data
 
+- Transaction console: `GET /`
 - Health check: `GET /health/`
 - Swagger UI: `GET /api/docs/`
 - OpenAPI schema: `GET /api/schema/`

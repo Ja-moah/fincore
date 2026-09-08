@@ -1,0 +1,192 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FinCore account and transfer dashboard">
+  <title>FinCore | Transaction Console</title>
+  <link rel="stylesheet" href="{% static 'config/dashboard.css' %}">
+  <script src="{% static 'config/dashboard.js' %}" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="FinCore home">
+      <span class="brand-mark" aria-hidden="true">F</span>
+      <span>FinCore</span>
+    </a>
+    <div class="header-actions">
+      <span class="system-status" id="system-status">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="system-status-label">Checking system</span>
+      </span>
+      <a href="/api/docs/" target="_blank" rel="noreferrer">API docs</a>
+      <a href="/api/schema/" target="_blank" rel="noreferrer">Schema</a>
+      <button class="button button-quiet" id="logout-button" type="button" hidden>Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="login-shell" id="login-view" aria-labelledby="login-heading">
+      <div class="login-intro">
+        <p class="eyebrow">Transaction engine</p>
+        <h1 id="login-heading">See every movement.<br>Trust every retry.</h1>
+        <p>Sign in to inspect a ledger-derived balance, send funds, and verify that repeating an idempotent request never moves money twice.</p>
+        <div class="guarantee-list" aria-label="Core financial guarantees">
+          <span>Double-entry ledger</span>
+          <span>Atomic transfers</span>
+          <span>Safe retries</span>
+        </div>
+      </div>
+
+      <form class="login-card" id="login-form">
+        <div>
+          <p class="eyebrow">Demo access</p>
+          <h2>Open an account</h2>
+          <p class="muted">Use one of the seeded users. Each has an independent GHS account.</p>
+        </div>
+
+        <label for="username">Demo user</label>
+        <select id="username" name="username" autocomplete="username">
+          <option value="demo_alice">demo_alice — GHS 1,100</option>
+          <option value="demo_bob">demo_bob — GHS 1,000</option>
+          <option value="demo_charlie">demo_charlie — GHS 900</option>
+        </select>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" value="fincore-demo-only" autocomplete="current-password" required>
+
+        <button class="button button-primary button-full" id="login-button" type="submit">Sign in securely</button>
+        <p class="form-message" id="login-message" role="alert" aria-live="polite"></p>
+        <p class="credential-note">These credentials are for the disposable demo environment only.</p>
+      </form>
+    </section>
+
+    <section class="dashboard" id="dashboard-view" aria-label="Account dashboard" hidden>
+      <div class="dashboard-heading">
+        <div>
+          <p class="eyebrow">Account overview</p>
+          <h1>Good to see you, <span id="display-name">account holder</span>.</h1>
+        </div>
+        <button class="button button-secondary" id="refresh-button" type="button">Refresh data</button>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="primary-column">
+          <section class="balance-card" aria-labelledby="balance-heading">
+            <div class="balance-topline">
+              <div>
+                <p class="card-label" id="balance-heading">Available balance</p>
+                <p class="account-number" id="account-number">Loading account…</p>
+              </div>
+              <span class="account-status" id="account-status">—</span>
+            </div>
+            <p class="balance-value" id="balance-value">GHS —</p>
+            <div class="balance-footnote">
+              <span>Derived live from ledger entries</span>
+              <span id="balance-updated">Not refreshed yet</span>
+            </div>
+          </section>
+
+          <section class="panel transfer-panel" aria-labelledby="transfer-heading">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">New movement</p>
+                <h2 id="transfer-heading">Send money</h2>
+              </div>
+              <span class="currency-badge">GHS only</span>
+            </div>
+
+            <form id="transfer-form">
+              <label for="recipient-account">Recipient account</label>
+              <input id="recipient-account" name="recipient_account" list="demo-accounts" placeholder="DEMO-GHS-BOB" maxlength="34" required>
+              <datalist id="demo-accounts">
+                <option value="DEMO-GHS-ALICE"></option>
+                <option value="DEMO-GHS-BOB"></option>
+                <option value="DEMO-GHS-CHARLIE"></option>
+              </datalist>
+
+              <div class="form-row">
+                <div>
+                  <label for="amount">Amount</label>
+                  <div class="money-input">
+                    <span>GHS</span>
+                    <input id="amount" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="25.00" required>
+                  </div>
+                </div>
+                <div>
+                  <label for="idempotency-key">Idempotency key</label>
+                  <div class="key-input">
+                    <input id="idempotency-key" name="idempotency_key" maxlength="255" required>
+                    <button id="new-key-button" type="button" aria-label="Generate a new idempotency key">New</button>
+                  </div>
+                </div>
+              </div>
+
+              <p class="field-help">Keep the same key and request values to demonstrate a safe retry.</p>
+              <div class="form-actions">
+                <button class="button button-primary" id="send-button" type="submit">Send money</button>
+                <button class="button button-secondary" id="retry-button" type="button" hidden>Retry same request</button>
+                <button class="text-button" id="insufficient-button" type="button">Load insufficient-funds demo</button>
+              </div>
+            </form>
+
+            <div class="transfer-result" id="transfer-result" role="status" aria-live="polite" hidden>
+              <span class="result-icon" id="result-icon" aria-hidden="true">✓</span>
+              <div>
+                <strong id="result-title">Transfer complete</strong>
+                <p id="result-message"></p>
+                <code id="result-transaction-id"></code>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="activity-panel panel" aria-labelledby="activity-heading">
+          <div class="panel-heading compact">
+            <div>
+              <p class="eyebrow">Request trail</p>
+              <h2 id="activity-heading">What’s happening</h2>
+            </div>
+            <button class="text-button" id="clear-activity-button" type="button">Clear</button>
+          </div>
+          <ol class="activity-list" id="activity-list" aria-live="polite">
+            <li class="activity-empty">Actions and API outcomes will appear here.</li>
+          </ol>
+        </aside>
+      </div>
+
+      <section class="panel history-panel" aria-labelledby="history-heading">
+        <div class="panel-heading history-heading">
+          <div>
+            <p class="eyebrow">Ledger activity</p>
+            <h2 id="history-heading">Transaction history</h2>
+          </div>
+          <span class="history-count" id="history-count">0 records</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Transaction</th>
+                <th scope="col">Counterparty</th>
+                <th scope="col">Status</th>
+                <th scope="col">Date</th>
+                <th scope="col" class="amount-column">Amount</th>
+              </tr>
+            </thead>
+            <tbody id="transaction-list">
+              <tr><td colspan="5" class="empty-cell">Loading transaction history…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer>
+    <span>FinCore transaction console</span>
+    <span>Ledger-backed · PostgreSQL · Django</span>
+  </footer>
+</body>
+</html>

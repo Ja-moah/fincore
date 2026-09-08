@@ -35,7 +35,7 @@ cp .env.example .env
 make bootstrap
 ```
 
-The Django development server is available at <http://localhost:8000> after
+The FinCore transaction console is available at <http://localhost:8000> after
 bootstrap. Swagger is at <http://localhost:8000/api/docs/> and health status is
 at <http://localhost:8000/health/>. Run `make help` for individual commands.
 
@@ -151,6 +151,18 @@ returned as `404`, avoiding disclosure that its identifier exists.
 Swagger documents JWT authentication, request and response bodies, error
 responses, and the required `Idempotency-Key` header. Use the **Authorize**
 control with a valid access token to call protected endpoints.
+
+## Transaction console
+
+The root route provides a responsive demo interface over the existing API. It
+supports demo-user login, ledger-derived balances, transfers, explicit
+idempotent retries, insufficient-funds demonstrations, transaction history,
+service health, and a visible request trail. JWTs are retained only in browser
+session storage and cleared when the tab session ends or the user signs out.
+
+The console contains no financial business rules. It sends requests to the same
+documented endpoints as any other client, and it renders API results without
+using client input as trusted financial state.
 
 ### Transfer example
 
